@@ -1,0 +1,19 @@
+app:
+  cert_file_path: "../certs/public_key.pem"
+server:
+  host: 127.0.0.1
+  port: 8080 # rest api port
+  timeout:
+    server: "30s"
+    read: "15s"
+    write: "10s"
+    idle: "5s"
+client:
+  host: 127.0.0.1
+  port: 8081 # grpc port
+redis:
+  host: "localhost"
+  port: 6379
+  user: "user"
+  password: "password"
+  dbIdx: 0
