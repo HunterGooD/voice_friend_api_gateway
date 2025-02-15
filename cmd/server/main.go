@@ -2,7 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"errors"
+
+	"github.com/HunterGooD/voice_friend_api_gateway/config"
+	"github.com/HunterGooD/voice_friend_user_service/pkg/auth"
+	"github.com/HunterGooD/voice_friend_user_service/pkg/logger"
+
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,8 +18,26 @@ import (
 )
 
 func main() {
+	log := logger.NewZapLogger()
+	defer log.Sync()
+
+	configPath := os.Getenv("CONFIG_PATH")
+	cfg, err := config.NewConfig(configPath)
+	if err != nil {
+		log.Error("Error init config", err)
+		panic(err)
+	}
+
+	tokenManager := auth.NewJWTGeneratorDefault("api_gateway")
+
+	_, err = tokenManager.LoadPublicKeyFromFile(cfg.App.CertFilePath)
+	if err != nil {
+		log.Error("Error load public key from file", err)
+		panic(err)
+	}
 
 	router := gin.Default()
+	router.Use(gin.Recovery())
 
 	s := &http.Server{
 		Addr:           ":8080",
@@ -24,9 +47,11 @@ func main() {
 		IdleTimeout:    5 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
+
 	go func() {
-		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed to start due to err: %v", err)
+		if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("Server failed to start", err)
+			panic(err)
 		}
 	}()
 
@@ -41,9 +66,13 @@ func main() {
 	)
 	defer cancel()
 
-	log.Printf("Server is shutting down due to %+v\n", interrupt)
+	log.Info("Server is shutting down", map[string]any{
+		"interrupt": interrupt,
+	})
+
 	if err := s.Shutdown(ctx); err != nil {
-		log.Fatalf("Server was unable to gracefully shutdown due to err: %+v", err)
+		log.Error("Server was unable to gracefully shutdown", err)
+		panic(err)
 	}
 
 }

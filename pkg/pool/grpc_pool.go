@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// Pool TODO: pool connection with generic for Rest and others clients
 type Pool struct {
 	conns []*grpc.ClientConn
 	mu    sync.Mutex
