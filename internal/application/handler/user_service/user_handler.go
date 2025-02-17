@@ -33,6 +33,7 @@ func NewHandler(route *gin.Engine, userUsecase UserAuthUsecase) {
 func (h *UserHandler) LoginUserHandler(c *gin.Context) {
 
 }
+
 func (h *UserHandler) RegisterUserHandler(c *gin.Context) {
 
 }
@@ -40,6 +41,7 @@ func (h *UserHandler) RegisterUserHandler(c *gin.Context) {
 func (h *UserHandler) LogOutUserHandler(c *gin.Context) {
 
 }
+
 func (h *UserHandler) UpdateAccessTokenUserHandler(c *gin.Context) {
 
 }

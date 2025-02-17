@@ -1,9 +1,12 @@
 package pool
 
 import (
+	"context"
 	"sync"
 
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -44,13 +47,30 @@ func NewPool(targetAddress string, poolSize int) (*Pool, error) {
 	return pool, nil
 }
 
-func (p *Pool) Get() *grpc.ClientConn {
+func (p *Pool) GetConn(ctx context.Context) (*grpc.ClientConn, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	conn := p.conns[p.index]
-	p.index = (p.index + 1) % p.size
-	return conn
+	startIndex := p.index
+
+	for {
+		conn := p.conns[p.index]
+		p.index = (p.index + 1) % p.size
+
+		// if  Ready to return
+		if conn != nil && conn.GetState() == connectivity.Ready {
+			return conn, nil
+		}
+
+		// if any connection not ready return error
+		if p.index == startIndex {
+			return nil, errors.Wrap(grpc.ErrClientConnClosing, "Error all connection is closing")
+		}
+
+		if ctx.Err() != nil {
+			return nil, errors.Wrap(ctx.Err(), "Error getting connection context close")
+		}
+	}
 }
 
 func (p *Pool) CloseAll() {
